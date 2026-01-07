@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>회원가입 데모</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        max-width: 400px;
+        margin: 50px auto;
+        padding: 20px;
+      }
+      .form-group {
+        margin-bottom: 15px;
+      }
+      input {
+        width: 100%;
+        padding: 8px;
+        margin-top: 5px;
+        box-sizing: border-box;
+      }
+      button {
+        width: 100%;
+        padding: 10px;
+        background-color: #4caf50;
+        color: white;
+        border: none;
+        cursor: pointer;
+        margin-top: 10px;
+      }
+      button:hover {
+        background-color: #45a049;
+      }
+      .message {
+        padding: 10px;
+        margin-top: 15px;
+        border-radius: 4px;
+      }
+      .success {
+        background-color: #d4edda;
+        color: #155724;
+      }
+      .error {
+        background-color: #f8d7da;
+        color: #721c24;
+      }
+      .hidden {
+        display: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="auth-section">
+      <h2>회원가입</h2>
+      <form id="signup-form">
+        <div class="form-group">
+          <label>이메일:</label>
+          <input type="email" id="signup-email" required />
+        </div>
+        <div class="form-group">
+          <label>비밀번호:</label>
+          <input type="password" id="signup-password" required minlength="6" />
+        </div>
+        <button type="submit">가입하기</button>
+      </form>
+
+      <h2>로그인</h2>
+      <form id="login-form">
+        <div class="form-group">
+          <label>이메일:</label>
+          <input type="email" id="login-email" required />
+        </div>
+        <div class="form-group">
+          <label>비밀번호:</label>
+          <input type="password" id="login-password" required />
+        </div>
+        <button type="submit">로그인</button>
+      </form>
+
+      <div id="message" class="message hidden"></div>
+    </div>
+
+    <div id="user-section" class="hidden">
+      <h2>환영합니다!</h2>
+      <p>로그인된 이메일: <span id="user-email"></span></p>
+      <button id="logout-btn">로그아웃</button>
+    </div>
+
+    <script>
+      // Supabase 초기화 - 여기에 본인의 키를 입력하세요
+      const supabaseUrl = "YOUR_SUPABASE_URL";
+      const supabaseKey = "YOUR_SUPABASE_ANON_KEY";
+      const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+
+      const authSection = document.getElementById("auth-section");
+      const userSection = document.getElementById("user-section");
+      const messageDiv = document.getElementById("message");
+
+      // 메시지 표시 함수
+      function showMessage(text, isError = false) {
+        messageDiv.textContent = text;
+        messageDiv.className = `message ${isError ? "error" : "success"}`;
+        messageDiv.classList.remove("hidden");
+        setTimeout(() => messageDiv.classList.add("hidden"), 5000);
+      }
+
+      // 회원가입
+      document
+        .getElementById("signup-form")
+        .addEventListener("submit", async (e) => {
+          e.preventDefault();
+          const email = document.getElementById("signup-email").value;
+          const password = document.getElementById("signup-password").value;
+
+          const { data, error } = await supabase.auth.signUp({
+            email: email,
+            password: password,
+          });
+
+          if (error) {
+            showMessage(`가입 실패: ${error.message}`, true);
+          } else {
+            showMessage("가입 완료! 이메일 인증을 확인해주세요.");
+            e.target.reset();
+          }
+        });
+
+      // 로그인
+      document
+        .getElementById("login-form")
+        .addEventListener("submit", async (e) => {
+          e.preventDefault();
+          const email = document.getElementById("login-email").value;
+          const password = document.getElementById("login-password").value;
+
+          const { data, error } = await supabase.auth.signInWithPassword({
+            email: email,
+            password: password,
+          });
+
+          if (error) {
+            showMessage(`로그인 실패: ${error.message}`, true);
+          } else {
+            showMessage("로그인 성공!");
+            checkUser();
+          }
+        });
+
+      // 로그아웃
+      document
+        .getElementById("logout-btn")
+        .addEventListener("click", async () => {
+          await supabase.auth.signOut();
+          checkUser();
+        });
+
+      // 사용자 상태 확인
+      async function checkUser() {
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+
+        if (user) {
+          authSection.classList.add("hidden");
+          userSection.classList.remove("hidden");
+          document.getElementById("user-email").textContent = user.email;
+        } else {
+          authSection.classList.remove("hidden");
+          userSection.classList.add("hidden");
+        }
+      }
+
+      // 초기 로드 시 사용자 확인
+      checkUser();
+
+      // 인증 상태 변경 감지
+      supabase.auth.onAuthStateChange((event, session) => {
+        checkUser();
+      });
+    </script>
+  </body>
+</html>
